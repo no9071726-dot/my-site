@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>КосмоБанк</title>
+
+<style>
+
+*{
+box-sizing:border-box;
+margin:0;
+padding:0;
+font-family:'Segoe UI',Roboto,sans-serif;
+}
+
+body{
+min-height:100vh;
+background:linear-gradient(135deg,#667eea,#764ba2);
+color:white;
+display:flex;
+align-items:center;
+justify-content:center;
+padding:20px;
+}
+
+.container{
+width:100%;
+max-width:1100px;
+}
+
+.card{
+background:rgba(255,255,255,0.1);
+backdrop-filter:blur(10px);
+border-radius:16px;
+padding:20px;
+margin:10px 0;
+box-shadow:0 10px 25px rgba(0,0,0,0.2);
+}
+
+button{
+border:none;
+padding:10px 15px;
+border-radius:10px;
+cursor:pointer;
+background:#6c7cff;
+color:white;
+font-weight:bold;
+transition:0.2s;
+}
+
+button:hover{
+opacity:0.9;
+transform:scale(1.03);
+}
+
+input{
+width:100%;
+padding:10px;
+border-radius:8px;
+border:none;
+margin-top:5px;
+margin-bottom:10px;
+}
+
+.tabs{
+display:flex;
+margin-bottom:10px;
+}
+
+.tabs button{
+flex:1;
+background:rgba(255,255,255,0.15);
+}
+
+.tabs button.active{
+background:#6c7cff;
+}
+
+.hidden{
+display:none;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+gap:10px;
+}
+
+.chat-box{
+height:200px;
+overflow-y:auto;
+background:rgba(0,0,0,0.2);
+padding:10px;
+border-radius:10px;
+margin-bottom:10px;
+}
+
+.message{
+margin-bottom:5px;
+font-size:14px;
+}
+
+.topbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:10px;
+}
+
+.history{
+max-height:150px;
+overflow:auto;
+font-size:14px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div id="auth" class="card">
+
+<h2>🚀 КосмоБанк</h2>
+
+<div class="tabs">
+<button id="tabLogin" class="active">Вход</button>
+<button id="tabReg">Регистрация</button>
+</div>
+
+<div id="loginBox">
+<input id="loginUser" placeholder="Логин">
+<input id="loginPass" type="password" placeholder="Пароль">
+<button onclick="login()">Войти</button>
+</div>
+
+<div id="regBox" class="hidden">
+<input id="regUser" placeholder="Логин">
+<input id="regPass" type="password" placeholder="Пароль">
+<button onclick="register()">Зарегистрироваться</button>
+</div>
+
+</div>
+
+<div id="app" class="hidden">
+
+<div class="card topbar">
+<div>
+👤 <span id="username"></span><br>
+💰 Баланс: <b id="balance"></b>
+</div>
+<button onclick="logout()">Выйти</button>
+</div>
+
+<div class="card">
+<h3>💬 Общий чат</h3>
+
+<div id="chat" class="chat-box"></div>
+
+<input id="chatInput" placeholder="Сообщение...">
+<button onclick="sendMsg()">Отправить</button>
+
+</div>
+
+<div class="card">
+
+<h3>🎮 Игры</h3>
+
+<div class="grid">
+
+<div class="card">
+<h4>⛏ Майнер</h4>
+<p>1-20 монет</p>
+<button onclick="miner()">Играть</button>
+</div>
+
+<div class="card">
+<h4>🎰 Казино</h4>
+<p>-30 до +80</p>
+<button onclick="casino()">Играть</button>
+</div>
+
+<div class="card">
+<h4>🎁 Бонус</h4>
+<p>+50 (10 сек)</p>
+<button id="bonusBtn" onclick="bonus()">Получить</button>
+</div>
+
+<div class="card">
+<h4>🪐 Подарок</h4>
+<p>+100 раз в сутки</p>
+<button onclick="gift()">Получить</button>
+</div>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<h3>💸 Перевод монет</h3>
+
+<input id="transferUser" placeholder="Получатель">
+<input id="transferAmount" type="number" placeholder="Сумма">
+
+<button onclick="transfer()">Отправить</button>
+
+</div>
+
+<div class="card">
+
+<h3>📜 История</h3>
+<div id="history" class="history"></div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+let currentUser=null
+
+function getUsers(){
+return JSON.parse(localStorage.getItem("users")||"{}")
+}
+
+function saveUsers(users){
+localStorage.setItem("users",JSON.stringify(users))
+}
+
+function getChat(){
+return JSON.parse(localStorage.getItem("chat")||"[]")
+}
+
+function saveChat(c){
+localStorage.setItem("chat",JSON.stringify(c))
+}
+
+function register(){
+
+let u=document.getElementById("regUser").value
+let p=document.getElementById("regPass").value
+
+let users=getUsers()
+
+if(users[u]) return alert("Пользователь уже существует")
+
+users[u]={
+pass:p,
+coins:100,
+history:[],
+lastBonus:0,
+lastGift:0
+}
+
+saveUsers(users)
+
+alert("Аккаунт создан")
+
+}
+
+function login(){
+
+let u=document.getElementById("loginUser").value
+let p=document.getElementById("loginPass").value
+
+let users=getUsers()
+
+if(!users[u]||users[u].pass!==p) return alert("Ошибка входа")
+
+currentUser=u
+localStorage.setItem("currentUser",u)
+
+showApp()
+
+}
+
+function logout(){
+
+localStorage.removeItem("currentUser")
+location.reload()
+
+}
+
+function showApp(){
+
+document.getElementById("auth").classList.add("hidden")
+document.getElementById("app").classList.remove("hidden")
+
+updateUI()
+
+}
+
+function updateUI(){
+
+let users=getUsers()
+let user=users[currentUser]
+
+document.getElementById("username").textContent=currentUser
+document.getElementById("balance").textContent=user.coins
+
+renderHistory()
+
+}
+
+function addHistory(text){
+
+let users=getUsers()
+let user=users[currentUser]
+
+user.history.unshift({
+text:text,
+time:new Date().toLocaleTimeString()
+})
+
+user.history=user.history.slice(0,10)
+
+saveUsers(users)
+
+}
+
+function renderHistory(){
+
+let users=getUsers()
+let user=users[currentUser]
+
+let html=""
+
+user.history.forEach(h=>{
+html+=`<div>${h.time} — ${h.text}</div>`
+})
+
+document.getElementById("history").innerHTML=html
+
+}
+
+function miner(){
+
+let gain=Math.floor(Math.random()*20)+1
+
+changeCoins(gain)
+
+addHistory("Майнер +"+gain)
+
+}
+
+function casino(){
+
+let val=Math.floor(Math.random()*110)-30
+
+changeCoins(val)
+
+addHistory("Казино "+(val>=0?"+":"")+val)
+
+}
+
+function bonus(){
+
+let users=getUsers()
+let user=users[currentUser]
+
+let now=Date.now()
+
+if(now-user.lastBonus<10000) return
+
+user.lastBonus=now
+
+user.coins+=50
+
+saveUsers(users)
+
+addHistory("Бонус +50")
+
+updateUI()
+
+document.getElementById("bonusBtn").disabled=true
+
+setTimeout(()=>{
+document.getElementById("bonusBtn").disabled=false
+},10000)
+
+}
+
+function gift(){
+
+let users=getUsers()
+let user=users[currentUser]
+
+let now=Date.now()
+
+if(now-user.lastGift<86400000)
+return alert("Подарок уже получен")
+
+user.lastGift=now
+
+user.coins+=100
+
+saveUsers(users)
+
+addHistory("Подарок +100")
+
+updateUI()
+
+}
+
+function changeCoins(val){
+
+let users=getUsers()
+let user=users[currentUser]
+
+user.coins=Math.max(0,user.coins+val)
+
+saveUsers(users)
+
+updateUI()
+
+}
+
+function transfer(){
+
+let to=document.getElementById("transferUser").value
+let amount=parseInt(document.getElementById("transferAmount").value)
+
+let users=getUsers()
+
+if(!users[to]) return alert("Пользователь не найден")
+
+if(to===currentUser) return alert("Нельзя себе")
+
+if(users[currentUser].coins<amount) return alert("Недостаточно")
+
+users[currentUser].coins-=amount
+users[to].coins+=amount
+
+users[currentUser].history.unshift({
+text:"Перевод "+amount+" → "+to,
+time:new Date().toLocaleTimeString()
+})
+
+users[to].history.unshift({
+text:"Получено "+amount+" ← "+currentUser,
+time:new Date().toLocaleTimeString()
+})
+
+saveUsers(users)
+
+updateUI()
+
+}
+
+function sendMsg(){
+
+let text=document.getElementById("chatInput").value
+if(!text) return
+
+let chat=getChat()
+
+chat.push({
+user:currentUser,
+text:text,
+time:new Date().toLocaleTimeString()
+})
+
+chat=chat.slice(-100)
+
+saveChat(chat)
+
+document.getElementById("chatInput").value=""
+
+renderChat()
+
+}
+
+function renderChat(){
+
+let chat=getChat()
+
+let html=""
+
+chat.forEach(m=>{
+html+=`<div class="message"><b>${m.user}</b> [${m.time}] : ${m.text}</div>`
+})
+
+let box=document.getElementById("chat")
+
+box.innerHTML=html
+
+box.scrollTop=box.scrollHeight
+
+}
+
+setInterval(renderChat,2000)
+
+document.getElementById("chatInput").addEventListener("keypress",e=>{
+if(e.key==="Enter") sendMsg()
+})
+
+document.getElementById("tabLogin").onclick=()=>{
+tabLogin.classList.add("active")
+tabReg.classList.remove("active")
+loginBox.classList.remove("hidden")
+regBox.classList.add("hidden")
+}
+
+document.getElementById("tabReg").onclick=()=>{
+tabReg.classList.add("active")
+tabLogin.classList.remove("active")
+regBox.classList.remove("hidden")
+loginBox.classList.add("hidden")
+}
+
+let saved=localStorage.getItem("currentUser")
+
+if(saved){
+currentUser=saved
+showApp()
+renderChat()
+}
+
+</script>
+
+</body>
+  </html>
